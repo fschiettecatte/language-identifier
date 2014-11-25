@@ -31,7 +31,7 @@ Commands:
 ./languageIdentifier.py --create --text-directory=textcat.texts --ngram-directory=textcat.ngrams
 
 # Identify the text language
-# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="the quick brown fox jumped over the lazy dog"
+./languageIdentifier.py --ngram-directory=textcat.ngrams --text="the quick brown fox jumped over the lazy dog"
 
 ```
 
