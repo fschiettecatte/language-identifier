@@ -1,8 +1,8 @@
 Language Identifier:
 ====================
 
-Simple language identifier which allows you to create language ngrams from source
-text in a variety of languages, and then identify the langiage of a piece of text.
+Simple language identifier that allows you to create language ngrams from source
+texts in a variety of languages, and then identify the language of a piece of text.
 
 I used the TextCat source texts for the ngram files, but you could just as easily
 use the Universal Declaration of Human Rights as source text.
@@ -23,7 +23,6 @@ Commands:
 ---------
 
 ```
-
 # Create ngrams from a text file for inspection
 ./languageIdentifier.py --create --text-file=textcat.texts/en.txt | more
 
@@ -32,10 +31,10 @@ Commands:
 
 # Identify the text language
 ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="the quick brown fox jumped over the lazy dog"
-
 ```
 
 There are more sample command lines in the file [languageIdentifier.py](./languageIdentifier.py)
+
 
 Userful Links:
 --------------
