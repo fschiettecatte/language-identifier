@@ -19,6 +19,24 @@ Directories:
 - ./textcat.ngrams - contains the ngram files
 
 
+Commands:
+---------
+
+```
+
+# Create ngrams from a text file for inspection
+./languageIdentifier.py --create --text-file=textcat.texts/en.txt | more
+
+# Create ngram files for all the text files in a directory
+./languageIdentifier.py --create --text-directory=textcat.texts --ngram-directory=textcat.ngrams
+
+# Identify the text language
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="the quick brown fox jumped over the lazy dog"
+
+```
+
+There are more sample command lines in the file [languageIdentifier.py](./languageIdentifier.py)
+
 Userful Links:
 --------------
 
