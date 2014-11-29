@@ -49,9 +49,13 @@
 #
 # en
 #
-# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="quick brown fox"
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="the quick brown fox"
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="the quick brown fox jumped over the lazy dog"
+#
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --text="the quick brown fox"
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --text="the quick brown fox jumped over the lazy dog"
+#
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --hint-multiplier=1.2 --text="the quick brown foxg"
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --hint-multiplier=1.2 --text="the quick brown fox jumped over the lazy dog"
 #
 #
@@ -182,11 +186,11 @@ logger = logging.getLogger()
 
 #--------------------------------------------------------------------------
 #
-#   Class:      LanguageNgram
+#   Class:      Ngram
 #
-#   Purpose:    Http class
+#   Purpose:    Ngram class
 #
-class LanguageNgram(object):
+class Ngram(object):
 
     # Ngram maximum length
     NGRAM_MAXIMUM_LENGTH = 4
@@ -252,16 +256,16 @@ class LanguageNgram(object):
             # Clean the line
             line = line.strip()
             
-            # Match the line
-            match = re.match(r'^(.+?)\s(\d+)$', line)
+            # Parse the line
+            match = re.match(r'^(.*?)\s+(.*)$', line)
             if match:
             
-                # Get the ngram and the frequency
+                # Get the ngram and the normalized frequency
                 ngram = match.group(1)
-                frequency = int(match.group(2))
+                normalizedFrequency = float(match.group(2))
                 
-                # Add the ngram and the frequency to the ngram dict
-                self.ngramDict[ngram] = frequency
+                # Add the ngram and the normalized frequency to the ngram dict
+                self.ngramDict[ngram] = normalizedFrequency
                 
                 # Update the ngram maximum length
                 self.ngramMaximumLength = max(self.ngramMaximumLength, len(ngram))
@@ -273,30 +277,13 @@ class LanguageNgram(object):
         # Close the ngram file
         ngramFile.close()
 
-        
-        # Loop over all the ngrams by length, adding up the frequencies and then normalizing them
-        for ngramLength in range(self.ngramMaximumLength, 0, -1):
-            
-            # Total frequency for this length
-            totalFrequency = 0
-            
-            # Add up the frequencies
-            for ngram, frequency in self.ngramDict.items():
-                if len(ngram) == ngramLength:
-                    totalFrequency += frequency
-            
-            # Normalize the frequencies and set them back in the ngrams hash
-            for ngram, frequency in self.ngramDict.items():
-                if len(ngram) == ngramLength:
-                    self.ngramDict[ngram] = (frequency / totalFrequency) * ngramLength
-
 
 
     #--------------------------------------------------------------------------
     #
     #   Method:     score
     #
-    #   Purpose:    Score the passed text ngram dict/text
+    #   Purpose:    Score against the passed text ngram dict/text
     #
     #   Parameters: textNgramDict   text ngram dict (optional)
     #               text            text (optional)
@@ -316,7 +303,7 @@ class LanguageNgram(object):
         
         # Extract the text ngram dict if needed
         if text:
-            textNgramDict = LanguageNgram.extractNgramDict(text, ngramMaximumLength=self.ngramMaximumLength)
+            textNgramDict = Ngram.extractNgramDict(text, ngramMaximumLength=self.ngramMaximumLength)
         
         
         # The score
@@ -378,19 +365,31 @@ class LanguageNgram(object):
         
             # Downcase
             term = term.lower()
-            
-            # Pad the term
-            padding = '$' * (ngramMaximumLength - 1)
-            term = padding + term + padding
+
+            # Term length
+            termLength = len(term)
+
+            # Adjusted ngram length, in case the term is too short
+            ngramAdjustedLength = min(termLength, ngramMaximumLength)
 
             # Loop over the ngram range
-            for start in range(0, len(term) - ngramMaximumLength + 1):
-
+            for start in range(1 - ngramAdjustedLength, termLength):
+    
                 # End of the ngram range
-                end = start + ngramMaximumLength
+                end = min(start + ngramAdjustedLength, termLength)
+    
+                # Start can never be less than 0
+                if start < 0:
+                    start = 0
 
                 # Extract the ngram we want
                 ngram = term[start:end]
+
+                # Close off start and end
+                if start == 0:
+                     ngram = '$' + ngram 
+                if end == termLength:
+                     ngram += '$' 
     
                 # And add it to the ngram dict
                 if ngram not in ngramDict:
@@ -400,6 +399,53 @@ class LanguageNgram(object):
 
         # Log
         logger.info('Terms processed: %d, ngrams extracted: %d.', len(termList), len(ngramDict))
+
+
+        # Return the ngram dict
+        return ngramDict
+
+
+
+    #--------------------------------------------------------------------------
+    #
+    #   Function:   normalizeNgramDict()
+    #
+    #   Purpose:    Normalize the ngram dict 
+    #
+    #   Called by:   
+    #
+    #   Parameters: ngramDict           the ngram dict
+    #               ngramMaximumLength  ngram maximum length
+    #
+    #   Exceptions: ValueError      if the ngram dict is invalid
+    #
+    #   Returns:   the same ngram dict
+    #
+    @staticmethod
+    def normalizeNgramDict(ngramDict, ngramMaximumLength=NGRAM_MAXIMUM_LENGTH):
+
+        # Check parameters
+        if not ngramDict:
+           raise ValueError('Invalid ngram dict')
+
+
+        # Loop over all the ngrams by length, adding up the frequencies and then normalizing them
+        for ngramLength in range(ngramMaximumLength, 0, -1):
+            
+            # Total frequency for this length
+            totalFrequency = 0
+            
+            # Add up the frequencies
+            for ngram, frequency in ngramDict.items():
+                term = ngram.replace('$', '')
+                if len(term) == ngramLength:
+                    totalFrequency += frequency
+            
+            # Normalize the frequencies and set them back in the ngrams hash
+            for ngram, frequency in ngramDict.items():
+                term = ngram.replace('$', '')
+                if len(term) == ngramLength:
+                    ngramDict[ngram] = (frequency / totalFrequency) * ngramLength
 
 
         # Return the ngram dict
@@ -450,7 +496,10 @@ class LanguageNgram(object):
         text = textFile.read()
     
         # Extract the ngram dict
-        ngramDict = LanguageNgram.extractNgramDict(text, ngramMaximumLength=ngramMaximumLength)
+        ngramDict = Ngram.extractNgramDict(text, ngramMaximumLength=ngramMaximumLength)
+
+        # Normalize the ngram dict
+        ngramDict = Ngram.normalizeNgramDict(ngramDict, ngramMaximumLength=ngramMaximumLength)
 
         # Create the ngram file if needed
         if ngramFilePath:
@@ -458,7 +507,7 @@ class LanguageNgram(object):
 
         # Sort the ngram dict in order of descending frequency
         for ngram, frequency in sorted(ngramDict.items(), key=operator.itemgetter(1), reverse=True):
-            ngramFile.write('{} {}\n'.format(ngram, frequency))
+            ngramFile.write('{:<10}{}\n'.format(ngram, frequency))
     
         # Close the text file if needed
         if textFilePath:
@@ -558,7 +607,7 @@ class LanguageIdentifier(object):
         for language, ngramFilePath in ngramFilePathList:
         
             # Create a new language ngram object for this ngram file path/language combination
-            languageNgram = LanguageNgram(language, ngramFilePath)
+            languageNgram = Ngram(language, ngramFilePath)
             
             # Update the ngram maximum length
             self.ngramMaximumLength = max(self.ngramMaximumLength, languageNgram.ngramMaximumLength)
@@ -590,7 +639,7 @@ class LanguageIdentifier(object):
 
         
         # Extract the ngram dict from the text
-        textNgramDict = LanguageNgram.extractNgramDict(text, ngramMaximumLength=self.ngramMaximumLength)
+        textNgramDict = Ngram.extractNgramDict(text, ngramMaximumLength=self.ngramMaximumLength)
         
         
         # The score list, tuple of language and score
@@ -629,9 +678,9 @@ class LanguageIdentifier(object):
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 #
-#   Function:   createWithFilePath()
+#   Function:   createFromFile()
 #
-#   Purpose:    Create with file path
+#   Purpose:    Create from file
 #
 #   Called by:   
 #
@@ -645,7 +694,7 @@ class LanguageIdentifier(object):
 #
 #   Returns:   
 #
-def createWithFilePath(textFilePath=None, textFile=None, ngramFilePath=None, ngramFile=None):
+def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFile=None):
 
     # Check parameters
     if not textFilePath and not textFile:
@@ -671,16 +720,16 @@ def createWithFilePath(textFilePath=None, textFile=None, ngramFilePath=None, ngr
 
 
     # Create the ngram file
-    LanguageNgram.createNgramFile(textFilePath=textFilePath, textFile=textFile, 
+    Ngram.createNgramFile(textFilePath=textFilePath, textFile=textFile, 
             ngramFilePath=ngramFilePath, ngramFile=ngramFile)
 
 
 
 #--------------------------------------------------------------------------
 #
-#   Function:   createWithDirectoryPath()
+#   Function:   createFromDirectory()
 #
-#   Purpose:    Create with directory path
+#   Purpose:    Create from directory
 #
 #   Called by:   
 #
@@ -693,7 +742,7 @@ def createWithFilePath(textFilePath=None, textFile=None, ngramFilePath=None, ngr
 #
 #   Returns:   
 #
-def createWithDirectoryPath(textDirectoryPath, ngramDirectoryPath, 
+def createFromDirectory(textDirectoryPath, ngramDirectoryPath, 
         textFileNameExtension=TEXT_FILE_NAME_EXTENSION):
 
     # Check parameters
@@ -734,7 +783,7 @@ def createWithDirectoryPath(textDirectoryPath, ngramDirectoryPath,
             ngramFilePath = os.path.join(ngramDirectoryPath, ngramFileName)
             
             # Create with the file path
-            createWithFilePath(textFilePath=textFilePath, ngramFilePath=ngramFilePath)
+            createFromFile(textFilePath=textFilePath, ngramFilePath=ngramFilePath)
 
 
 
@@ -772,8 +821,17 @@ def identifyText(languageIdentifier, text, hint=None,
     
     # List the scores
     if scoreList:
+        
+        # Total score
+        totalScore = 0
+
+        # Get the total score
         for language, score in scoreList:
-            logger.info('{:<5}    {:f}'.format(language, score))
+            totalScore += score
+        
+        # List the scores
+        for language, score in scoreList:
+            logger.info('{:<5}    {:f}    {:%}'.format(language, score, (score / totalScore)))
     
     # Fail
     else:
@@ -783,9 +841,9 @@ def identifyText(languageIdentifier, text, hint=None,
 
 #--------------------------------------------------------------------------
 #
-#   Function:   identifyWithFilePath()
+#   Function:   identifyTextFromFile()
 #
-#   Purpose:    Identify with the file path
+#   Purpose:    Identify the text from a file
 #
 #   Called by:   
 #
@@ -799,7 +857,7 @@ def identifyText(languageIdentifier, text, hint=None,
 #
 #   Returns:   
 #
-def identifyWithFilePath(languageIdentifier, textFilePath, hint=None, 
+def identifyTextFromFile(languageIdentifier, textFilePath, hint=None, 
         hintMultiplier=LanguageIdentifier.HINT_MULTIPLIER):
 
     # Check parameters
@@ -852,7 +910,7 @@ def usage():
     print('Ngram options:')
     print('\t[--ngram-file=name|--ngram-directory=name] ngram file name or ngram directory name, optional, defaults to \'stdout\'.')
     print('\t[--ngram-file-extension=name] ngram file name extension, optional, defaults to: \'{}\''.format(LanguageIdentifier.NGRAM_FILE_NAME_EXTENSION))
-    print('\t[--ngram-maximum-length=#] ngram length, defaults to: {}'.format(LanguageNgram.NGRAM_MAXIMUM_LENGTH))
+    print('\t[--ngram-maximum-length=#] ngram length, defaults to: {}'.format(Ngram.NGRAM_MAXIMUM_LENGTH))
     print('')
 
 
@@ -925,8 +983,8 @@ if __name__ == '__main__':
     # Ngram file name extension
     ngramFileNameExtension = LanguageIdentifier.NGRAM_FILE_NAME_EXTENSION
 
-    # Ngram maximumL length
-    ngramMaximumLength = LanguageNgram.NGRAM_MAXIMUM_LENGTH
+    # Ngram maximum length
+    ngramMaximumLength = Ngram.NGRAM_MAXIMUM_LENGTH
 
 
     # Process the options
@@ -981,7 +1039,7 @@ if __name__ == '__main__':
         if textDirectoryPath and ngramDirectoryPath:
 
             # Create with directory path
-            createWithDirectoryPath(textDirectoryPath, ngramDirectoryPath, textFileNameExtension)
+            createFromDirectory(textDirectoryPath, ngramDirectoryPath, textFileNameExtension)
     
         # File/stdin to file/stdout
         elif not textDirectoryPath and not ngramDirectoryPath:
@@ -999,7 +1057,7 @@ if __name__ == '__main__':
                 ngramFile = sys.stdout
 
             # Create with file path
-            createWithFilePath(textFilePath=textFilePath, textFile=textFile, ngramFilePath=ngramFilePath, ngramFile=ngramFile)
+            createFromFile(textFilePath=textFilePath, textFile=textFile, ngramFilePath=ngramFilePath, ngramFile=ngramFile)
 
         # Fail
         else:
@@ -1017,7 +1075,7 @@ if __name__ == '__main__':
         if textFilePath:
 
             # Identify with file path
-            identifyWithFilePath(languageIdentifier, textFilePath, hint, hintMultiplier)
+            identifyTextFromFile(languageIdentifier, textFilePath, hint, hintMultiplier)
     
         # Text
         elif text:
