@@ -684,17 +684,19 @@ class LanguageIdentifier(object):
 #
 #   Called by:   
 #
-#   Parameters: textFilePath    the text file path (optional)
-#               textFile        the text file (optional)
-#               ngramFilePath   the ngram file path (optional)
-#               ngramFile       the ngram file (optional)
+#   Parameters: textFilePath        the text file path (optional)
+#               textFile            the text file (optional)
+#               ngramFilePath       the ngram file path (optional)
+#               ngramFile           the ngram file (optional)
+#               ngramMaximumLength  the ngram maximum length (optional)
 #
 #   Exceptions: ValueError      if the text file path/text file is invalid
 #               ValueError      if the ngram file path/ngram file is invalid
 #
 #   Returns:   
 #
-def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFile=None):
+def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFile=None,
+        ngramMaximumLength=Ngram.NGRAM_MAXIMUM_LENGTH):
 
     # Check parameters
     if not textFilePath and not textFile:
@@ -721,7 +723,7 @@ def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFi
 
     # Create the ngram file
     Ngram.createNgramFile(textFilePath=textFilePath, textFile=textFile, 
-            ngramFilePath=ngramFilePath, ngramFile=ngramFile)
+            ngramFilePath=ngramFilePath, ngramFile=ngramFile, ngramMaximumLength=ngramMaximumLength)
 
 
 
@@ -736,6 +738,8 @@ def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFi
 #   Parameters: textDirectoryPath       the text directory path
 #               ngramDirectoryPath      the ngram directory path
 #               textFileNameExtension   the text file name extension (optional)
+#               ngramFileNameExtension  the ngram file name extension (optional)
+#               ngramMaximumLength      the ngram maximum length (optional)
 #
 #   Exceptions: ValueError      if the text directory path is invalid
 #               ValueError      if the ngram directory path is invalid
@@ -743,7 +747,9 @@ def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFi
 #   Returns:   
 #
 def createFromDirectory(textDirectoryPath, ngramDirectoryPath, 
-        textFileNameExtension=TEXT_FILE_NAME_EXTENSION):
+        textFileNameExtension=TEXT_FILE_NAME_EXTENSION, 
+        ngramFileNameExtension=LanguageIdentifier.NGRAM_FILE_NAME_EXTENSION, 
+        ngramMaximumLength=Ngram.NGRAM_MAXIMUM_LENGTH):
 
     # Check parameters
     if not textDirectoryPath:
@@ -783,7 +789,8 @@ def createFromDirectory(textDirectoryPath, ngramDirectoryPath,
             ngramFilePath = os.path.join(ngramDirectoryPath, ngramFileName)
             
             # Create with the file path
-            createFromFile(textFilePath=textFilePath, ngramFilePath=ngramFilePath)
+            createFromFile(textFilePath=textFilePath, ngramFilePath=ngramFilePath, 
+                    ngramMaximumLength=ngramMaximumLength)
 
 
 
@@ -1039,7 +1046,8 @@ if __name__ == '__main__':
         if textDirectoryPath and ngramDirectoryPath:
 
             # Create with directory path
-            createFromDirectory(textDirectoryPath, ngramDirectoryPath, textFileNameExtension)
+            createFromDirectory(textDirectoryPath, ngramDirectoryPath, textFileNameExtension=textFileNameExtension, 
+                    ngramFileNameExtension=ngramFileNameExtension, ngramMaximumLength=ngramMaximumLength)
     
         # File/stdin to file/stdout
         elif not textDirectoryPath and not ngramDirectoryPath:
@@ -1057,7 +1065,8 @@ if __name__ == '__main__':
                 ngramFile = sys.stdout
 
             # Create with file path
-            createFromFile(textFilePath=textFilePath, textFile=textFile, ngramFilePath=ngramFilePath, ngramFile=ngramFile)
+            createFromFile(textFilePath=textFilePath, textFile=textFile, ngramFilePath=ngramFilePath, 
+                    ngramFile=ngramFile, ngramMaximumLength=ngramMaximumLength)
 
         # Fail
         else:
