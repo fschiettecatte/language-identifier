@@ -353,7 +353,7 @@ class Ngram(object):
 
 
         # Split the text into a list of terms
-        termList = re.split(r'[^\w]+', text)
+        termList = re.split(r'[\W\s\d]+', text)
 
 
         # The ngram dict
