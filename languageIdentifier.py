@@ -37,6 +37,8 @@
 #
 # ./languageIdentifier.py --create --text-file=textcat.texts/zh_TC.txt | more
 #
+# ./languageIdentifier.py --create --text-file=textcat.texts/en.txt --ngram-file=textcat.ngrams/en.txt
+#
 # ./languageIdentifier.py --create --text-directory=textcat.texts --ngram-directory=textcat.ngrams
 #
 # ./languageIdentifier.py ---create -text-directory=udhr.texts --ngram-directory=udhr.ngrams
@@ -55,8 +57,8 @@
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --text="the quick brown fox"
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --text="the quick brown fox jumped over the lazy dog"
 #
-# ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --hint-multiplier=1.2 --text="the quick brown foxg"
-# ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --hint-multiplier=1.2 --text="the quick brown fox jumped over the lazy dog"
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --hint-multiplier=0.2 --text="the quick brown fox"
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --hint=en --hint-multiplier=0.2 --text="the quick brown fox jumped over the lazy dog"
 #
 #
 # fr
@@ -268,11 +270,12 @@ class Ngram(object):
                 self.ngramDict[ngram] = normalizedFrequency
                 
                 # Update the ngram maximum length
-                self.ngramMaximumLength = max(self.ngramMaximumLength, len(ngram))
+                self.ngramMaximumLength = max(self.ngramMaximumLength, len(ngram.replace('$', '')))
             
             # Match failed
             else:
                 raise ValueError('Invalid ngram entry: \'{}\', in ngram file: \'{}\''.format(line, self.ngramFilePath))
+        
         
         # Close the ngram file
         ngramFile.close()
@@ -387,9 +390,9 @@ class Ngram(object):
 
                 # Close off start and end
                 if start == 0:
-                     ngram = '$' + ngram 
+                    ngram = '$' + ngram 
                 if end == termLength:
-                     ngram += '$' 
+                    ngram += '$' 
     
                 # And add it to the ngram dict
                 if ngram not in ngramDict:
@@ -437,14 +440,12 @@ class Ngram(object):
             
             # Add up the frequencies
             for ngram, frequency in ngramDict.items():
-                term = ngram.replace('$', '')
-                if len(term) == ngramLength:
+                if len(ngram.replace('$', '')) == ngramLength:
                     totalFrequency += frequency
             
             # Normalize the frequencies and set them back in the ngrams hash
             for ngram, frequency in ngramDict.items():
-                term = ngram.replace('$', '')
-                if len(term) == ngramLength:
+                if len(ngram.replace('$', '')) == ngramLength:
                     ngramDict[ngram] = (frequency / totalFrequency) * ngramLength
 
 
@@ -507,7 +508,7 @@ class Ngram(object):
 
         # Sort the ngram dict in order of descending frequency
         for ngram, frequency in sorted(ngramDict.items(), key=operator.itemgetter(1), reverse=True):
-            ngramFile.write('{:<10}{}\n'.format(ngram, frequency))
+            ngramFile.write('{:<10}    {:.20f}\n'.format(ngram, frequency))
     
         # Close the text file if needed
         if textFilePath:
@@ -838,7 +839,7 @@ def identifyText(languageIdentifier, text, hint=None,
         
         # List the scores
         for language, score in scoreList:
-            logger.info('{:<5}    {:f}    {:%}'.format(language, score, (score / totalScore)))
+            logger.info('{:<5}    {:.10f}    {:.0%}'.format(language, score, (score / totalScore)))
     
     # Fail
     else:
