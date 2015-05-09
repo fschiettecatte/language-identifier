@@ -4,7 +4,7 @@
 #--------------------------------------------------------------------------
 #
 # Author: Francois Schiettecatte
-# Creation Date: November 2014 (ported from Perl)
+# Creation Date: November 2014
 #
 
 
@@ -33,15 +33,19 @@
 #
 # ./languageIdentifier.py --create --text-file=textcat.texts/ja.txt | more
 #
-# ./languageIdentifier.py --create --text-file=textcat.texts/zh_SC.txt | more
+# ./languageIdentifier.py --create --text-file=textcat.texts/zh-hans.txt | more
 #
-# ./languageIdentifier.py --create --text-file=textcat.texts/zh_TC.txt | more
+# ./languageIdentifier.py --create --text-file=textcat.texts/zh-hant.txt | more
 #
 # ./languageIdentifier.py --create --text-file=textcat.texts/en.txt --ngram-file=textcat.ngrams/en.txt
 #
+# ./languageIdentifier.py --create --text-file=textcat.texts/zh-hans.txt --ngram-file=textcat.ngrams/zh-hans.txt
+#
+# ./languageIdentifier.py --create --text-file=textcat.texts/zh-hant.txt --ngram-file=textcat.ngrams/zh-hant.txt
+#
 # ./languageIdentifier.py --create --text-directory=textcat.texts --ngram-directory=textcat.ngrams
 #
-# ./languageIdentifier.py ---create -text-directory=udhr.texts --ngram-directory=udhr.ngrams
+# ./languageIdentifier.py --create --text-directory=udhr.texts --ngram-directory=udhr.ngrams
 #
 #
 
@@ -110,15 +114,30 @@
 #
 # ru
 #
-# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="быстро коричневая лисица поскакала над ленивой собакой"
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="Быстрая коричневая лиса перепрыгнула через ленивую собаку"
 #
 #
-# zh_SC
+# bg
+#
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="бързата кафява лисица прескочи мързеливия кучето"
+#
+#
+# be
+#
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="хуткая карычневая ліса пераскочыла праз ляніва сабаку"
+#
+#
+# uk
+#
+# ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="Швидка коричнева лисиця перестрибнула через ледачу собаку"
+#
+#
+# zh-hans
 #
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="快速棕色狐狸跳过了懒惰狗"
 #
 #
-# zh_TC
+# zh-hant
 #
 # ./languageIdentifier.py --ngram-directory=textcat.ngrams --text="快速棕色狐狸跳過了懶惰狗"
 #
@@ -570,18 +589,19 @@ class LanguageIdentifier(object):
         # Create the match regex for filtering file names,
         # matching the following formats:
         #
-        #   en.txt
-        #   eng.txt
-        #   en_US.txt
+        #	en.txt
+        #	en_US.txt
+        #	zh-hans.txt
+        #	zh-hans_CN.txt
         #   
-        ngramFileNameMatchRegex = re.compile(r'^(\w\w|\w\w\w|\w\w_\w\w)\{}$'.format(self.ngramFileNameExtension))
+        ngramFileNameMatchRegex = re.compile(r'^(\w{{2}}|\w{{2}}_\w{{2}}|\w{{2}}-\w{{4}}|\w{{2}}-\w{{4}}_\w{{2}})\{}$'.format(self.ngramFileNameExtension))
 
         # Walk over the the text directory
         for dirname, dirnames, filenames in os.walk(self.ngramDirectoryPath):
     
             # Walk over the files names
             for filename in filenames:
-        
+
                 # Match on the file name
                 matcher = ngramFileNameMatchRegex.match(filename)
                     
@@ -723,8 +743,7 @@ def createFromFile(textFilePath=None, textFile=None, ngramFilePath=None, ngramFi
 
 
     # Create the ngram file
-    Ngram.createNgramFile(textFilePath=textFilePath, textFile=textFile, 
-            ngramFilePath=ngramFilePath, ngramFile=ngramFile, ngramMaximumLength=ngramMaximumLength)
+    Ngram.createNgramFile(textFilePath=textFilePath, textFile=textFile, ngramFilePath=ngramFilePath, ngramFile=ngramFile, ngramMaximumLength=ngramMaximumLength)
 
 
 
@@ -759,15 +778,16 @@ def createFromDirectory(textDirectoryPath, ngramDirectoryPath,
     if not ngramDirectoryPath:
         raise ValueError('Invalid ngram directory path')
    
-   
+  
     # Create the match regex for filtering text file names,
     # matching the following formats:
     #
     #	en.txt
-    #	eng.txt
     #	en_US.txt
+    #	zh-hans.txt
+    #	zh-hans_CN.txt
     #	
-    textFileNameMatchRegex = re.compile(r'^(\w\w|\w\w\w|\w\w_\w\w)\{}$'.format(textFileNameExtension))
+    textFileNameMatchRegex = re.compile(r'^(\w{{2}}|\w{{2}}_\w{{2}}|\w{{2}}-\w{{4}}|\w{{2}}-\w{{4}}_\w{{2}})\{}$'.format(textFileNameExtension))
 
 
     # Walk over the the text directory
@@ -790,8 +810,7 @@ def createFromDirectory(textDirectoryPath, ngramDirectoryPath,
             ngramFilePath = os.path.join(ngramDirectoryPath, ngramFileName)
             
             # Create with the file path
-            createFromFile(textFilePath=textFilePath, ngramFilePath=ngramFilePath, 
-                    ngramMaximumLength=ngramMaximumLength)
+            createFromFile(textFilePath=textFilePath, ngramFilePath=ngramFilePath, ngramMaximumLength=ngramMaximumLength)
 
 
 
@@ -839,7 +858,7 @@ def identifyText(languageIdentifier, text, hint=None,
         
         # List the scores
         for language, score in scoreList:
-            logger.info('{:<5}    {:.10f}    {:.0%}'.format(language, score, (score / totalScore)))
+            logger.info('{:<10}    {:.10f}    {:.0%}'.format(language, score, (score / totalScore)))
     
     # Fail
     else:
